@@ -1,2 +1,4 @@
-name: pnivek
-description: Lumin Labs custom recipes for DGX Spark cluster
+registries:
+  - name: pnivek
+    description: Lumin Labs custom recipes for Kevin's DGX Spark cluster
+    recipes: recipes
