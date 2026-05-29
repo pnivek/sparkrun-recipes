@@ -21,6 +21,7 @@ defaults:
   kv_cache_dtype: auto
   tool_call_parser: qwen3_xml
   reasoning_parser: qwen3
+  speculative_config: {"method": "dflash", "model": "z-lab/Qwen3.6-27B-DFlash", "num_speculative_tokens": 7}
 
 env:
   VLLM_MARLIN_USE_ATOMIC_ADD: "1"
