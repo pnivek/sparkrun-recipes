@@ -1,0 +1,48 @@
+recipe_version: "2"
+model: unsloth/Qwen3.6-27B-NVFP4
+runtime: vllm
+container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest
+
+metadata:
+  description: Qwen3.6-27B NVFP4 unsloth with dflash speculation
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  pipeline_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 262144
+  max_num_batched_tokens: 32768
+  max_num_seqs: 3
+  dtype: bfloat16
+  quantization: compressed-tensors
+  load_format: safetensors
+  kv_cache_dtype: auto
+  tool_call_parser: qwen3_xml
+  reasoning_parser: qwen3
+
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: "1"
+
+command: |
+  vllm serve {model} \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --dtype {dtype} \
+    --quantization {quantization} \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --max-num-seqs {max_num_seqs} \
+    --kv-cache-dtype {kv_cache_dtype} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --load-format {load_format} \
+    --enable-prefix-caching \
+    --enable-chunked-prefill \
+    --enable-auto-tool-choice \
+    --tool-call-parser {tool_call_parser} \
+    --reasoning-parser {reasoning_parser} \
+    '"method": "dflash", "model": "z-lab/Qwen3.6-27B-DFlash", "num_speculative_tokens": 7' \
+    -tp {tensor_parallel} \
+    -pp {pipeline_parallel} 
