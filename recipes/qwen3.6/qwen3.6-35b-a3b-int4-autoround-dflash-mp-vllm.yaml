@@ -2,6 +2,7 @@ recipe_version: "2"
 model: Intel/Qwen3.6-35B-A3B-int4-mixed-AutoRound
 runtime: vllm
 container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest
+min_nodes: 2
 
 metadata:
   description: Qwen3.6-35B-A3B int4-mixed AutoRound with dflash (2-node)
