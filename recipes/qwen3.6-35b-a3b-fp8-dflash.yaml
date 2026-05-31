@@ -1,0 +1,62 @@
+# Recipe: Qwen/Qwen3.6-35B-A3B-FP8
+# Single-node Qwen3.6-35B-A3B-FP8 with DFlash speculation (z-lab draft, 15 tokens)
+# Uses qwen3.6-enhanced.jinja (v6 template)
+
+recipe_version: "2"
+model: Qwen/Qwen3.6-35B-A3B-FP8
+runtime: vllm
+container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest
+
+metadata:
+  description: Qwen3.6-35B-A3B-FP8 with DFlash speculation (v6 template)
+
+mods:
+  - mods/fix-qwen3.6-enhanced
+
+defaults:
+  port: 8888
+  host: 0.0.0.0
+  tensor_parallel: 1
+  pipeline_parallel: 1
+  gpu_memory_utilization: 0.8
+  max_model_len: 262144
+  max_num_batched_tokens: 32768
+  load_format: fastsafetensors
+  kv_cache_dtype: auto
+  attention_backend: flash_attn
+  tool_call_parser: qwen3_coder
+  reasoning_parser: qwen3
+  chat_template_kwargs: '{"preserve_thinking": true}'
+  generation_config: '{"temperature": 0.7, "top_p": 0.80, "top_k": 20, "min_p": 0.0}'
+  speculative_config: '{"method": "dflash", "model": "z-lab/Qwen3.6-35B-A3B-DFlash", "num_speculative_tokens": 15}'
+
+env:
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
+  VLLM_MARLIN_USE_ATOMIC_ADD: "1"
+  TORCH_MATMUL_PRECISION: high
+  NVIDIA_FORWARD_COMPAT: 1
+  NVIDIA_DISABLE_REQUIRE: 1
+  TRANSFORMERS_OFFLINE: 1
+
+command: |
+  vllm serve {model} \
+    -O3 \
+    --host {host} --port {port} \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --dtype bfloat16 \
+    --kv-cache-dtype {kv_cache_dtype} \
+    --enable-auto-tool-choice \
+    --reasoning-parser {reasoning_parser} \
+    --tool-call-parser {tool_call_parser} \
+    --chat-template qwen3.6-enhanced.jinja \
+    --trust-remote-code \
+    --enable-prefix-caching \
+    --load-format {load_format} \
+    --attention-backend {attention_backend} \
+    --default-chat-template-kwargs '{chat_template_kwargs}' \
+    --override-generation-config '{generation_config}' \
+    --speculative-config '{speculative_config}' \
+    -tp {tensor_parallel} \
+    -pp {pipeline_parallel}

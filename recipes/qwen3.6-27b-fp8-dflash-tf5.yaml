@@ -1,0 +1,56 @@
+# Recipe: Qwen/Qwen3.6-27B-FP8
+# Qwen3.6-27B-FP8 with DFlash speculation (z-lab draft, 10 tokens)
+# Built with vllm-node-tf5 for TF5-optimized inference
+
+recipe_version: "1"
+name: Qwen36-27B-FP8-dflash-tf5
+description: vLLM serving Qwen3.6-27B-FP8 + DFlash drafter (v6 template)
+
+model: Qwen/Qwen3.6-27B-FP8
+
+# Build with TF5 optimization
+container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly-tf5:latest
+
+# Mods: v6 enhanced chat template
+mods:
+  - mods/fix-qwen3.6-enhanced
+
+defaults:
+  port: 8888
+  host: 0.0.0.0
+  tensor_parallel: 2
+  gpu_memory_utilization: 0.8
+  max_model_len: 262144
+  max_num_batched_tokens: 32768
+  chat_template_kwargs: '{"preserve_thinking": true}'
+  generation_config: '{"temperature": 0.7, "top_p": 0.80, "top_k": 20, "min_p": 0.0}'
+  speculative_config: '{"method": "dflash", "model": "z-lab/Qwen3.6-27B-DFlash", "num_speculative_tokens": 10}'
+
+env:
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
+  TORCH_MATMUL_PRECISION: high
+  NVIDIA_FORWARD_COMPAT: 1
+  NVIDIA_DISABLE_REQUIRE: 1
+  TRANSFORMERS_OFFLINE: 1
+
+command: |
+  vllm serve Qwen/Qwen3.6-27B-FP8 \
+    -O3 \
+    --host {host} --port {port} \
+    -tp {tensor_parallel} \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --dtype bfloat16 \
+    --kv-cache-dtype auto \
+    --enable-auto-tool-choice \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_xml \
+    --chat-template qwen3.6-enhanced.jinja \
+    --trust-remote-code \
+    --enable-prefix-caching \
+    --load-format fastsafetensors \
+    --default-chat-template-kwargs '{chat_template_kwargs}' \
+    --override-generation-config '{generation_config}' \
+    --speculative-config '{speculative_config}' \
+    --attention-backend flash_attn \

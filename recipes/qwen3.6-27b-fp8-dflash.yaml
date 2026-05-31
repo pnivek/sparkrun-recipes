@@ -26,9 +26,12 @@ defaults:
   attention_backend: flash_attn
   tool_call_parser: qwen3_coder
   reasoning_parser: qwen3
-  speculative_config: {method: dflash, model: z-lab/Qwen3.6-27B-DFlash, num_speculative_tokens: 10}
+  chat_template_kwargs: '{"preserve_thinking": true}'
+  generation_config: '{"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0}'
+  speculative_config: '{"method": "dflash", "model": "z-lab/Qwen3.6-27B-DFlash", "num_speculative_tokens": 10}'
 
 env:
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
   VLLM_MARLIN_USE_ATOMIC_ADD: "1"
   TORCH_MATMUL_PRECISION: high
   NVIDIA_FORWARD_COMPAT: 1
@@ -52,8 +55,8 @@ command: |
     --enable-prefix-caching \
     --load-format {load_format} \
     --attention-backend {attention_backend} \
-    --default-chat-template-kwargs {preserve_thinking: true} \
-    --override-generation-config {temperature: 0.7, top_p: 0.80, top_k: 20, min_p: 0.0} \
-    --speculative-config {speculative_config} \
+    --default-chat-template-kwargs '{chat_template_kwargs}' \
+    --override-generation-config '{generation_config}' \
+    --speculative-config '{speculative_config}' \
     -tp {tensor_parallel} \
     -pp {pipeline_parallel}

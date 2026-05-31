@@ -2,27 +2,27 @@ recipe_version: "2"
 model: Intel/Qwen3.6-27B-int4-AutoRound
 runtime: vllm
 container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest
-min_nodes: 2
 
 metadata:
-  description: Qwen3.6-27B int4 AutoRound with dflash (2-node)
+  description: Qwen3.6-27B int4 AutoRound with dflash speculation
 
 defaults:
   port: 8000
   host: 0.0.0.0
-  tensor_parallel: 2
+  tensor_parallel: 1
   pipeline_parallel: 1
-  gpu_memory_utilization: 0.85
+  gpu_memory_utilization: 0.8
   max_model_len: 262144
   max_num_batched_tokens: 32768
-  max_num_seqs: 10
-  dtype: bfloat16
-  load_format: safetensors
-  attention_backend: flash_attn
+  max_num_seqs: 4
+  load_format: fastsafetensors
+  kv_cache_dtype: fp8
+  attention_backend: flashinfer
   tool_call_parser: qwen3_xml
   reasoning_parser: qwen3
 
 env:
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
   VLLM_MARLIN_USE_ATOMIC_ADD: "1"
 
 command: |
@@ -33,16 +33,15 @@ command: |
     --max-model-len {max_model_len} \
     --max-num-batched-tokens {max_num_batched_tokens} \
     --max-num-seqs {max_num_seqs} \
-    --dtype {dtype} \
     --gpu-memory-utilization {gpu_memory_utilization} \
+    --kv-cache-dtype {kv_cache_dtype} \
     --load-format {load_format} \
     --attention-backend {attention_backend} \
-    --enable-prefix-caching \
+    --enable-prefix-caching \\
     --enable-auto-tool-choice \
     --tool-call-parser {tool_call_parser} \
     --reasoning-parser {reasoning_parser} \
-    '"method": "dflash", "model": "z-lab/Qwen3.5-27B-DFlash", "num_speculative_tokens": 4, "draft_tensor_parallel_size": 1' \
-    '"preserve_thinking": true' \
-    --generation-config auto \
+    --speculative-config '{"method": "dflash", "model": "z-lab/Qwen3.6-27B-DFlash", "num_speculative_tokens": 8}' \
+    --preserve-thinking \
     -tp {tensor_parallel} \
     -pp {pipeline_parallel} 
