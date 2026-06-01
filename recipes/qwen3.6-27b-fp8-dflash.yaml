@@ -24,7 +24,7 @@ defaults:
   load_format: fastsafetensors
   kv_cache_dtype: auto
   attention_backend: flash_attn
-  tool_call_parser: qwen3_coder
+  tool_call_parser: qwen3_xml
   reasoning_parser: qwen3
   chat_template_kwargs: '{"preserve_thinking": true}'
   generation_config: '{"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0}'
