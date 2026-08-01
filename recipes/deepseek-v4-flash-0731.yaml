@@ -1,6 +1,7 @@
 # Recipe: deepseek-ai/DeepSeek-V4-Flash-0731
 # 2-node DeepSeek V4 Flash with DSpark speculative decoding on DGX Spark cluster
-# Updated from model card — uses dspark method, not mtp
+# Based on @eugr/deepseek-v4-flash, updated for 0731 release
+# Reference: https://forums.developer.nvidia.com/t/376220 (eugr + DSpark community run)
 
 recipe_version: "2"
 model: deepseek-ai/DeepSeek-V4-Flash-0731
@@ -8,7 +9,7 @@ runtime: vllm-ray
 container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly-tf5:latest
 
 metadata:
-  description: DeepSeek V4 Flash 0731 with DSpark speculation, 2-node tensor parallel
+  description: DeepSeek V4 Flash 0731 with DSpark speculation (DSpark-5), 2-node TP
 
 defaults:
   port: 8000
@@ -20,9 +21,12 @@ defaults:
   max_num_batched_tokens: 8192
   max_num_seqs: 4
   block_size: 256
-  num_speculative_tokens: 7
+  num_speculative_tokens: 5
   kv_cache_dtype: fp8
   load_format: instanttensor
+  tokenizer_mode: deepseek_v4
+  tool_call_parser: deepseek_v4
+  reasoning_parser: deepseek_v4
 
 env:
   DG_JIT_USE_NVRTC: "0"
@@ -43,5 +47,10 @@ command: |
     --gpu-memory-utilization {gpu_memory_utilization} \
     --enable-prefix-caching \
     --speculative-config '{"method":"dspark","num_speculative_tokens":{num_speculative_tokens},"draft_sample_method":"greedy"}' \
+    --tokenizer-mode {tokenizer_mode} \
     --distributed-executor-backend ray \
+    --tool-call-parser {tool_call_parser} \
+    --enable-auto-tool-choice \
+    --reasoning-parser {reasoning_parser} \
+    --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
     --load-format {load_format}
