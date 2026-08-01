@@ -17,6 +17,16 @@
 
 set -e
 
+# --- Fix /tmp/.cache permissions ---
+# Known sparkrun issue: containers run as host user but /tmp/.cache/ can be
+# root-owned from previous runs, breaking FlashInfer JIT and vLLM model cache.
+# https://forums.developer.nvidia.com/t/360832?page=5
+if [ -d /tmp/.cache ]; then
+    chown -R $(id -u):$(id -g) /tmp/.cache/ 2>/dev/null || true
+    echo "[fix-dspark-sm120-topk] /tmp/.cache permissions fixed"
+fi
+
+# --- Patch FlashInfer SM120 topk dispatch ---
 F="$(python3 -c 'import os,flashinfer; print(os.path.join(os.path.dirname(flashinfer.__file__),"mla","_sparse_mla_sm120.py"))' 2>/dev/null)"
 
 [ -f "$F" ] || {
