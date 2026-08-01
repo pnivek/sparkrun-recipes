@@ -12,6 +12,8 @@ metadata:
   description: >-
     DeepSeek V4 Flash 0731 with DSpark speculative decoding (5-token Markov draft),
     2-node tensor parallel. vLLM with Ray executor.
+  model_dtype: fp8
+  kv_dtype: fp8
 
 mods:
   - mods/fix-dspark-sm120-topk
