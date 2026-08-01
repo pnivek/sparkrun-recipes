@@ -23,8 +23,8 @@ defaults:
   host: 0.0.0.0
   tensor_parallel: 2
   pipeline_parallel: 1
-  gpu_memory_utilization: 0.80
-  max_model_len: 100000
+  gpu_memory_utilization: 0.85
+  max_model_len: 200000
   max_num_batched_tokens: 8192
   max_num_seqs: 4
 
@@ -54,7 +54,7 @@ command: |
     --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
     --default-chat-template-kwargs.thinking=true \
     --default-chat-template-kwargs.reasoning_effort=high \
-    --load-format instanttensor
+    --load-format fastsafetensors
 
 executor_config:
   user: root
