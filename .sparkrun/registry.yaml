@@ -1,5 +1,5 @@
 registries:
-- name: pnivek
-  description: Lumin Labs custom recipes for Kevin's DGX Spark cluster
-  recipes: recipes
-  mods: mods
+  - name: pnivek
+    description: Custom recipes for Kevin's DGX Spark cluster
+    recipes: recipes
+    mods: mods

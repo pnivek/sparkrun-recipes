@@ -1,5 +1,0 @@
-registries:
-  - name: pnivek
-    description: Custom recipes for Kevin's DGX Spark cluster
-    recipes: recipes
-    mods: mods
