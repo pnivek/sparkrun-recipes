@@ -55,7 +55,7 @@ command: |
     --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
     --default-chat-template-kwargs.thinking=true \
     --default-chat-template-kwargs.reasoning_effort=high \
-    --load-format fastsafetensors
+    --load-format instanttensor
 
 executor_config:
   user: root
