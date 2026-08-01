@@ -34,7 +34,7 @@ env:
   TRANSFORMERS_OFFLINE: "1"
 
 command: |
-  vllm serve {model} \
+  vllm serve deepseek-ai/DeepSeek-V4-Flash-0731 \
     --host {host} --port {port} \
     --trust-remote-code \
     --tensor-parallel-size {tensor_parallel} \
