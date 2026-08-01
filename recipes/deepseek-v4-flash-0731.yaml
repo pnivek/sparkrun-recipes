@@ -16,6 +16,7 @@ metadata:
   kv_dtype: fp8
 
 mods:
+  - mods/instanttensor-hybrid-draft-loader
   - mods/fix-dspark-sm120-topk
 
 defaults:

@@ -8,8 +8,8 @@ from pathlib import Path
 
 MARKER = "# spark-vllm mod: instanttensor-hybrid-draft-loader v1"
 
-GET_MODEL_ANCHOR = """
-def get_model(
+# NOTE: anchor starts at column 0 with "def get_model(" — no leading newline
+GET_MODEL_ANCHOR = """def get_model(
 *,
 vllm_config: VllmConfig,
 model_config: ModelConfig | None = None,
@@ -39,7 +39,7 @@ load_config: LoadConfig | None,
     if mode not in allowed_modes:
         raise ValueError(
             "INSTANTTENSOR_DRAFT_LOADER must be one of "
-            f"{{, .join(allowed_modes)}}; got {{mode!r}}"
+            f"{{', '.join(allowed_modes)}}; got {{mode!r}}"
         )
     effective = load_config or vllm_config.load_config
     load_format = getattr(effective.load_format, "value", effective.load_format)
@@ -158,14 +158,9 @@ def main() -> int:
         print(f"[instanttensor-hybrid-draft-loader] {args.target} is {state}.")
         return 0
     if patched == original:
-        print(
-            "[instanttensor-hybrid-draft-loader] "
-            "Model loader is already patched; skipping."
-        )
+        print("[instanttensor-hybrid-draft-loader] Model loader is already patched; skipping.")
         return 0
-    temporary = args.target.with_suffix(
-        args.target.suffix + ".instanttensor-draft-mod.tmp"
-    )
+    temporary = args.target.with_suffix(args.target.suffix + ".instanttensor-draft-mod.tmp")
     temporary.write_text(patched)
     temporary.replace(args.target)
     print(f"[instanttensor-hybrid-draft-loader] Patched {args.target}.")
