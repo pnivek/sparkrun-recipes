@@ -17,16 +17,6 @@
 
 set -e
 
-# --- Fix /tmp/.cache permissions ---
-# Known sparkrun issue: containers run as host user but /tmp/.cache/ can be
-# root-owned from previous runs, breaking FlashInfer JIT and vLLM model cache.
-# https://forums.developer.nvidia.com/t/360832?page=5
-if [ -d /tmp/.cache ]; then
-    chown -R $(id -u):$(id -g) /tmp/.cache/ 2>/dev/null || true
-    echo "[fix-dspark-sm120-topk] /tmp/.cache permissions fixed"
-fi
-
-# --- Patch FlashInfer SM120 topk dispatch ---
 F="$(python3 -c 'import os,flashinfer; print(os.path.join(os.path.dirname(flashinfer.__file__),"mla","_sparse_mla_sm120.py"))' 2>/dev/null)"
 
 [ -f "$F" ] || {
@@ -44,9 +34,6 @@ if MARKER in s:
     print("[fix-dspark-sm120-topk] already applied")
     raise SystemExit(0)
 
-# Anchor INSIDE _paged_attention (8-space indent) where model_type/topk_length are in scope.
-# The original PR anchored in get_sparse_mla_sm120_module() (4-space indent) which caused
-# NameError: name 'model_type' is not defined at cache-build time.
 anchor = (
     "        num_tokens, num_heads, d_qk = q.shape\n"
     "        topk = indices.shape[-1]\n"
