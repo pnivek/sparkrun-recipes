@@ -16,6 +16,7 @@ metadata:
   kv_dtype: fp8
 
 mods:
+  - mods/instanttensor-hybrid-draft-loader
   - mods/fix-dspark-sm120-topk
 
 defaults:
@@ -54,7 +55,7 @@ command: |
     --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
     --default-chat-template-kwargs.thinking=true \
     --default-chat-template-kwargs.reasoning_effort=high \
-    --load-format safetensors
+    --load-format instanttensor
 
 executor_config:
   user: root
