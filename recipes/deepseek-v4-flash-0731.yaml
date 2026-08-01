@@ -16,7 +16,6 @@ metadata:
   kv_dtype: fp8
 
 mods:
-  - mods/fix-tmp-cache-perms
   - mods/fix-dspark-sm120-topk
 
 defaults:
