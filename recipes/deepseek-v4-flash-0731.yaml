@@ -56,3 +56,6 @@ command: |
     --default-chat-template-kwargs.thinking=true \
     --default-chat-template-kwargs.reasoning_effort=high \
     --load-format instanttensor
+
+executor_config:
+  user: root
