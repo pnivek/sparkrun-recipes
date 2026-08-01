@@ -27,7 +27,6 @@ defaults:
   max_model_len: 200000
   max_num_batched_tokens: 8192
   max_num_seqs: 4
-  num_speculative_tokens: 5
 
 env:
   DG_JIT_USE_NVRTC: "0"
@@ -46,13 +45,13 @@ command: |
     --max-num-batched-tokens {max_num_batched_tokens} \
     --gpu-memory-utilization {gpu_memory_utilization} \
     --enable-prefix-caching \
-    --speculative-config '{{"method":"dspark","num_speculative_tokens":{num_speculative_tokens},"draft_sample_method":"probabilistic"}}' \
+    --speculative-config '{"method":"dspark","num_speculative_tokens":5,"draft_sample_method":"probabilistic"}' \
     --tokenizer-mode deepseek_v4 \
     --distributed-executor-backend ray \
     --tool-call-parser deepseek_v4 \
     --enable-auto-tool-choice \
     --reasoning-parser deepseek_v4 \
-    --reasoning-config '{{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}}' \
+    --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
     --default-chat-template-kwargs.thinking=true \
     --default-chat-template-kwargs.reasoning_effort=high \
     --load-format instanttensor
