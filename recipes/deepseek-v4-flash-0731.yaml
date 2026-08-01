@@ -1,7 +1,8 @@
-# Recipe: deepseek-ai/DeepSeek-V4-Flash-0731
-# 2-node DeepSeek V4 Flash with DSpark speculative decoding on DGX Spark cluster
-# Based on @eugr/deepseek-v4-flash, updated for 0731 release
-# Reference: https://forums.developer.nvidia.com/t/376220 (eugr + DSpark community run)
+# Recipe: DeepSeek V4 Flash 0731 with DSpark speculative decoding
+# Based on community recipe from eugr/spark-vllm-docker PR #319 (bilikaz)
+# Updated with gitmarecki's v2 SM120 fix and community-validated config
+#
+# Verified working by community on 2x DGX Spark, TP=2, dspark method
 
 recipe_version: "2"
 model: deepseek-ai/DeepSeek-V4-Flash-0731
@@ -9,20 +10,25 @@ runtime: vllm-ray
 container: ghcr.io/spark-arena/dgx-vllm-eugr-nightly-tf5:latest
 
 metadata:
-  description: DeepSeek V4 Flash 0731 with DSpark speculation (DSpark-5), 2-node TP
+  description: >-
+    DeepSeek V4 Flash 0731 with DSpark speculative decoding (5-token Markov draft),
+    2-node tensor parallel. vLLM with Ray executor.
+
+mods:
+  - mods/fix-dspark-sm120-topk
 
 defaults:
   port: 8000
   host: 0.0.0.0
   tensor_parallel: 2
   pipeline_parallel: 1
-  gpu_memory_utilization: 0.8
-  max_model_len: 500000
+  gpu_memory_utilization: 0.85
+  max_model_len: 200000
   max_num_batched_tokens: 8192
   max_num_seqs: 4
   block_size: 256
   num_speculative_tokens: 5
-  kv_cache_dtype: fp8
+  kv_cache_dtype: fp8_ds_mla
   load_format: instanttensor
   tokenizer_mode: deepseek_v4
   tool_call_parser: deepseek_v4
@@ -32,7 +38,6 @@ env:
   DG_JIT_USE_NVRTC: "0"
   VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
   VLLM_USE_BREAKABLE_CUDAGRAPH: "0"
-  TRANSFORMERS_OFFLINE: "1"
 
 command: |
   vllm serve deepseek-ai/DeepSeek-V4-Flash-0731 \
@@ -46,11 +51,13 @@ command: |
     --max-num-batched-tokens {max_num_batched_tokens} \
     --gpu-memory-utilization {gpu_memory_utilization} \
     --enable-prefix-caching \
-    --speculative-config '{"method":"dspark","num_speculative_tokens":{num_speculative_tokens},"draft_sample_method":"greedy"}' \
+    --speculative-config '{"method":"dspark","num_speculative_tokens":{num_speculative_tokens},"draft_sample_method":"probabilistic"}' \
     --tokenizer-mode {tokenizer_mode} \
     --distributed-executor-backend ray \
     --tool-call-parser {tool_call_parser} \
     --enable-auto-tool-choice \
     --reasoning-parser {reasoning_parser} \
     --reasoning-config '{"reasoning_parser":"deepseek_v4","reasoning_start_str":"","reasoning_end_str":""}' \
+    --default-chat-template-kwargs.thinking=true \
+    --default-chat-template-kwargs.reasoning_effort=high \
     --load-format {load_format}
