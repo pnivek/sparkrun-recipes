@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Add hybrid loader policy for speculative draft models.
 PATCHER V3: uses AST to find get_model() instead of exact string match.
-Works across vLLM versions as long as get_model() exists as a module-level function."""
+Replaces the entire get_model function body with the patched version."""
 from __future__ import annotations
 import argparse
 import ast
@@ -11,7 +11,7 @@ import textwrap
 
 MARKER = "# spark-vllm mod: instanttensor-hybrid-draft-loader v1"
 
-PATCH_CODE = textwrap.dedent("""
+HELPER_FUNC = textwrap.dedent("""
 def _instanttensor_draft_load_config(
     vllm_config: VllmConfig,
     model_config: ModelConfig,
@@ -66,67 +66,121 @@ def _instanttensor_draft_load_config(
 
 def patch_file(target_path: Path) -> None:
     source = target_path.read_text()
+    lines = source.splitlines(keepends=True)
 
     if MARKER in source:
         print("[instanttensor-hybrid-draft-loader] already patched.")
         return
 
-    # Parse the source
     tree = ast.parse(source)
 
     # Find get_model function
     get_model_func = None
-    get_model_idx = None
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "get_model":
             get_model_func = node
             break
 
     if get_model_func is None:
-        print("[instanttensor-hybrid-draft-loader ERROR] get_model() not found in module", file=sys.stderr)
+        print("[instanttensor-hybrid-draft-loader ERROR] get_model() not found", file=sys.stderr)
         sys.exit(1)
 
-    # Get the line number where get_model starts (1-indexed)
-    lines = source.splitlines(keepends=True)
+    func_start = get_model_func.lineno - 1  # 0-indexed first line of def
+    func_end = get_model_func.end_lineno     # 1-indexed last line
 
-    # Find where to insert the helper function: right before get_model
-    insert_line = get_model_func.lineno - 1  # 0-indexed
+    # Build the new get_model body
+    new_body = textwrap.dedent("""\
+    if model_config is None:
+        model_config = vllm_config.model_config
+    resolved_load_config = _instanttensor_draft_load_config(
+        vllm_config, model_config, load_config
+    )
+    loader = get_model_loader(resolved_load_config)
+    return loader.load_model(
+        vllm_config=vllm_config, model_config=model_config, prefix=prefix
+    )
+    """)
 
-    # Build the patch
-    helper_def = f"\n{MARKER}\n{PATCH_CODE}\n\n"
-    patched_lines = lines[:insert_line] + [helper_def] + lines[insert_line:]
+    # Get indentation from the original function body
+    # Find the first statement in the function body to determine indent
+    first_stmt = get_model_func.body[0]
+    body_indent = " " * (first_stmt.col_offset)
 
-    # Now patch get_model's body to use the helper
-    patched_source = "".join(patched_lines)
-
-    # Find the get_model body and add the resolved_load_config line
-    # Look for "loader = get_model_loader(" pattern
-    old_loader_call = "loader = get_model_loader(load_config or vllm_config.load_config)"
-    new_loader_block = (
-        "if model_config is None:\n"
-        "        model_config = vllm_config.model_config\n"
-        "    resolved_load_config = _instanttensor_draft_load_config(\n"
-        "        vllm_config, model_config, load_config\n"
-        "    )\n"
-        "    loader = get_model_loader(resolved_load_config)"
+    # Indent the new body
+    indented_body = "\n".join(
+        body_indent + line if line.strip() else ""
+        for line in new_body.strip().split("\n")
     )
 
-    if old_loader_call in patched_source:
-        patched_source = patched_source.replace(old_loader_call, new_loader_block, 1)
+    # Get the function signature lines (def line + parameter lines)
+    sig_lines = []
+    for i in range(func_start, func_end):
+        line = lines[i]
+        sig_lines.append(line)
+        if line.rstrip().endswith("):") or line.rstrip().endswith("->") or line.rstrip() == ")":
+            # Check if the line after "):" starts the body
+            pass
+        if "):" in line or ") ->" in line:
+            break
+
+    # Actually, simpler approach: take everything from func_start to func_end,
+    # find where the signature ends (the first "):" or ") ->"), and replace
+    # everything after that with the new body
+
+    func_text = "".join(lines[func_start:func_end])
+
+    # Find the end of the signature — look for "):" on a line
+    sig_end_offset = None
+    for i, line in enumerate(lines[func_start:func_end]):
+        stripped = line.rstrip()
+        if stripped.endswith("):") or stripped.endswith(") -> nn.Module:") or stripped.endswith(") -> \"nn.Module\":"):
+            sig_end_offset = i
+            break
+        # Also handle multi-line: if the stripped line ends with ) and the
+        # previous line started the signature
+        if stripped == ") -> nn.Module:" or stripped == "):":
+            sig_end_offset = i
+            break
+
+    if sig_end_offset is None:
+        # Fallback: find the last line before the body starts
+        for i, line in enumerate(lines[func_start:func_end]):
+            if line.rstrip().endswith(":"):
+                sig_end_offset = i
+                break
+
+    if sig_end_offset is None:
+        print("[instanttensor-hybrid-draft-loader ERROR] could not find signature end", file=sys.stderr)
+        sys.exit(1)
+
+    # Build the new function
+    sig_part = "".join(lines[func_start:func_start + sig_end_offset + 1])
+    new_func = sig_part + "\n" + indented_body + "\n"
+
+    # Replace the old function with the new one
+    patched = source[:func_start] + new_func + source[func_end:]
+
+    # Now insert the helper function before get_model
+    # Find where to insert — before the marker in the new function
+    marker_pos = patched.find(f"\n{MARKER}\n")
+    if marker_pos == -1:
+        # Insert helper right before the patched get_model
+        insert_pos = patched.find(new_func)
+        helper_block = f"{MARKER}\n{HELPER_FUNC}\n\n"
+        patched = patched[:insert_pos] + helper_block + patched[insert_pos:]
     else:
-        # Try alternative format (no space after comma)
-        old_loader_call_v2 = "loader = get_model_loader(load_config or vllm_config.load_config)"
-        if old_loader_call_v2 not in patched_source:
-            print("[instanttensor-hybrid-draft-loader ERROR] could not find loader call in get_model()", file=sys.stderr)
-            print("Looking for:", repr(old_loader_call), file=sys.stderr)
-            sys.exit(1)
-        patched_source = patched_source.replace(old_loader_call_v2, new_loader_block, 1)
+        # Already inserted
+        pass
 
     # Validate
-    ast.parse(patched_source)
+    try:
+        ast.parse(patched)
+    except SyntaxError as e:
+        print(f"[instanttensor-hybrid-draft-loader ERROR] syntax error after patch: {e}", file=sys.stderr)
+        sys.exit(1)
 
     tmp = target_path.with_suffix(target_path.suffix + ".modtmp")
-    tmp.write_text(patched_source)
+    tmp.write_text(patched)
     tmp.replace(target_path)
     print("[instanttensor-hybrid-draft-loader] Patched successfully.")
 
