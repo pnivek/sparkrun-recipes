@@ -11,7 +11,7 @@ import textwrap
 
 MARKER = "# spark-vllm mod: instanttensor-hybrid-draft-loader v1"
 
-HELPER_FUNC = textwrap.dedent("""
+HELPER_FUNC = textwrap.dedent("""\
 def _instanttensor_draft_load_config(
     vllm_config: VllmConfig,
     model_config: ModelConfig,
@@ -25,7 +25,7 @@ def _instanttensor_draft_load_config(
     if mode not in allowed_modes:
         raise ValueError(
             "INSTANTTENSOR_DRAFT_LOADER must be one of "
-            f"{{', '.join(allowed_modes)}}; got {{mode!r}}"
+            + ", ".join(allowed_modes) + "; got " + repr(mode)
         )
     effective = load_config or vllm_config.load_config
     load_format = getattr(effective.load_format, "value", effective.load_format)
