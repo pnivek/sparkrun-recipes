@@ -321,7 +321,7 @@ config_vllm = root / "config/vllm.py"
 if config_vllm.exists():
     src = config_vllm.read_text()
     if "validate_nvfp4_kv_cache_with_mla" in src:
-        patch(
+        replace(
             "config/vllm.py",
             """        if (
             self.cache_config.cache_dtype.startswith("nvfp4")
