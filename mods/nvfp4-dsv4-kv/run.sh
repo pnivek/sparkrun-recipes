@@ -312,12 +312,40 @@ replace(
     f"page size: {envelope}B envelope for deepseek_v4 nvfp4",
 )
 
+# --- top-level VllmConfig validator (added upstream ~2026-08: rejects any
+# cache_dtype.startswith("nvfp4") when use_mla, which over-matches the packed
+# nvfp4_ds_mla DSV4 layout this mod enables). Neutralize for nvfp4_ds_mla only;
+# plain nvfp4 stays rejected as upstream intends. Older trees without the
+# validator skip cleanly.
+config_vllm = root / "config/vllm.py"
+if config_vllm.exists():
+    src = config_vllm.read_text()
+    if "validate_nvfp4_kv_cache_with_mla" in src:
+        patch(
+            "config/vllm.py",
+            """        if (
+            self.cache_config.cache_dtype.startswith("nvfp4")
+            and self.model_config.use_mla
+        ):
+""",
+            """        if (
+            self.cache_config.cache_dtype.startswith("nvfp4")
+            and self.cache_config.cache_dtype != "nvfp4_ds_mla"
+            and self.model_config.use_mla
+        ):
+""",
+            "VllmConfig nvfp4+MLA validator: exempt nvfp4_ds_mla",
+        )
+    else:
+        print("[nvfp4-dsv4-kv] skip  VllmConfig nvfp4+MLA validator (not present in this tree)")
+
 print("[nvfp4-dsv4-kv] verifying byte-compile...")
 for rel in (
     "models/deepseek_v4/attention.py",
     "models/deepseek_v4/sparse_mla.py",
     "v1/attention/backends/mla/sparse_swa.py",
     "v1/kv_cache_interface.py",
+    "config/vllm.py",
 ):
     py_compile.compile(str(root / rel), doraise=True)
 print("[nvfp4-dsv4-kv] all patches applied + byte-compiled OK")

@@ -10,7 +10,7 @@ recipe_version: "2"
 model: deepseek-ai/DeepSeek-V4-Flash-0731
 runtime: vllm-distributed
 min_nodes: 2
-container: eugr/spark-vllm-b12x:latest
+container: eugr/spark-vllm-b12x@sha256:ac3db18a2ac6b02e90abc733836b7743a3484f2704d97cd4113c84af7d384931  # nightly-20260807, digest-pinned
 
 metadata:
   description: >-
