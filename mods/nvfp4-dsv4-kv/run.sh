@@ -320,7 +320,10 @@ replace(
 config_vllm = root / "config/vllm.py"
 if config_vllm.exists():
     src = config_vllm.read_text()
-    if "validate_nvfp4_kv_cache_with_mla" in src:
+    if 'self.cache_config.cache_dtype == "nvfp4" and' in src:
+        # Benign form: exact-equality check never matches nvfp4_ds_mla.
+        print("[nvfp4-dsv4-kv] skip  VllmConfig nvfp4+MLA validator (exact-match form, nvfp4_ds_mla unaffected)")
+    elif "validate_nvfp4_kv_cache_with_mla" in src:
         replace(
             "config/vllm.py",
             """        if (
