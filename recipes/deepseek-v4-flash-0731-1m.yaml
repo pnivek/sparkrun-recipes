@@ -3,8 +3,15 @@
 # Uses eugr's public prebuilt SparkInfer/B12X runner (Docker Hub) + three
 # runtime mods from this repo that unlock nvfp4_ds_mla KV on the DSV4 path.
 # Stock images without the mods cap out around ~300K with fp8_ds_mla.
-# Validated: 900K-token needle-in-haystack PASS (exact recall), boot at
-# max_model_len=1048576, KV pool ~2.79M tokens @ 11.1 GiB (2.66x concurrency at 1M).
+# Validated (2026-08-28/29, 2x DGX Spark, public digest-pinned image):
+#   995,061-token needle-in-haystack PASS (exact recall of KEVIN_NEEDLE_9F3A2C7B),
+#   prefill ~1,110 tok/s (896s wall), boot at max_model_len=1048576,
+#   KV pool ~2.9M tokens (2.70-2.77x concurrency at 1M).
+# Ops note: the head node carries the heaviest sustained CPU+GPU load during
+# deep prefill. Put your healthiest/coolest node first in --hosts. On nodes
+# with marginal cooling, head-role prefill can trip firmware thermal limits
+# (observed: 92-93C CPU -> instant power-off on one ZGX Nano; its twin ran
+# the same run at 80-84C).
 
 recipe_version: "2"
 model: deepseek-ai/DeepSeek-V4-Flash-0731
